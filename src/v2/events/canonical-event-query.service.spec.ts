@@ -63,4 +63,36 @@ describe('CanonicalEventQueryService', () => {
       },
     );
   });
+
+  it('accepts bigint and number cursors by normalizing them to decimal strings', async () => {
+    const qb = {
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([{ id: '2' }]),
+    };
+    repo.createQueryBuilder.mockReturnValue(qb as never);
+
+    await service.findAfter(['EvidenceRegistered'], { blockNumber: 100n, logIndex: 8 }, 25);
+    await service.findAfter(['EvidenceRegistered'], { blockNumber: 200, logIndex: 3 }, 25);
+
+    expect(qb.andWhere).toHaveBeenNthCalledWith(
+      1,
+      '(e.blockNumber > :blockNumber OR (e.blockNumber = :blockNumber AND e.logIndex > :logIndex))',
+      {
+        blockNumber: '100',
+        logIndex: 8,
+      },
+    );
+    expect(qb.andWhere).toHaveBeenNthCalledWith(
+      2,
+      '(e.blockNumber > :blockNumber OR (e.blockNumber = :blockNumber AND e.logIndex > :logIndex))',
+      {
+        blockNumber: '200',
+        logIndex: 3,
+      },
+    );
+  });
 });
