@@ -25,6 +25,15 @@ export class CanonicalEventQueryService {
     after: { blockNumber: string; logIndex: number } | null,
     limit: number,
   ): Promise<CanonicalEvent[]> {
+    if (!Array.isArray(eventNames) || eventNames.length === 0) return [];
+    if (!Number.isInteger(limit) || limit <= 0) return [];
+
+    const hasCursor =
+      after !== null &&
+      after !== undefined &&
+      typeof after.blockNumber === 'string' &&
+      Number.isInteger(after.logIndex);
+
     const qb = this.events
       .createQueryBuilder('e')
       .where('e.eventName IN (:...eventNames)', { eventNames })
@@ -32,7 +41,7 @@ export class CanonicalEventQueryService {
       .addOrderBy('e.logIndex', 'ASC')
       .limit(limit);
 
-    if (after) {
+    if (hasCursor) {
       qb.andWhere(
         '(e.blockNumber > :blockNumber OR (e.blockNumber = :blockNumber AND e.logIndex > :logIndex))',
         {
